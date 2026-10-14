@@ -1,0 +1,145 @@
+import { lazy, Suspense, type ReactNode } from 'react'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { AuthProvider } from './contexts/AuthContext'
+import { queryClient } from './lib/queryClient'
+import ProtectedRoute, { SplashScreen } from './components/ProtectedRoute'
+import { ToastProvider } from './components/ui/Toast'
+import { ErrorBoundary } from './pages/system/StatusPages'
+
+// Every page is its own chunk: the first load only pulls the shell and the page being opened
+const AppShell = lazy(() => import('./components/AppShell'))
+const LandingPage = lazy(() => import('./pages/public/LandingPage'))
+const LoginPage = lazy(() => import('./pages/LoginPage'))
+const OrgChartPage = lazy(() => import('./pages/employees/OrgChartPage'))
+const HolidaysPage = lazy(() => import('./pages/holidays/HolidaysPage'))
+const AnnouncementsPage = lazy(() => import('./pages/workplace/AnnouncementsPage'))
+const PoliciesPage = lazy(() => import('./pages/workplace/PoliciesPage'))
+const GrievancesPage = lazy(() => import('./pages/workplace/GrievancesPage'))
+const AuditPage = lazy(() => import('./pages/reports/AuditPage'))
+const ReportsPage = lazy(() => import('./pages/reports/ReportsPage'))
+const ReportBuilderPage = lazy(() => import('./pages/reports/ReportBuilderPage'))
+const IncentivesPage = lazy(() => import('./pages/payroll/IncentivesPage'))
+const BulkDocumentsPage = lazy(() => import('./pages/employees/DocumentsTab').then((m) => ({ default: m.BulkDocumentsPage })))
+const AttendancePoliciesPage = lazy(() => import('./pages/attendance/AttendancePoliciesPage'))
+const RequestsPage = lazy(() => import('./pages/employees/RequestsPage'))
+const ImportEmployeesPage = lazy(() => import('./pages/employees/ImportEmployeesPage'))
+const TaxPage = lazy(() => import('./pages/payroll/TaxPage'))
+const RecruitmentPage = lazy(() => import('./pages/employees/RecruitmentPage'))
+const OpeningPage = lazy(() => import('./pages/employees/RecruitmentPage').then((m) => ({ default: m.OpeningPage })))
+const CandidatePage = lazy(() => import('./pages/employees/RecruitmentPage').then((m) => ({ default: m.CandidatePage })))
+const ReportPage = lazy(() => import('./pages/reports/ReportsPage').then((m) => ({ default: m.ReportPage })))
+const MyCasePage = lazy(() => import('./pages/workplace/GrievancesPage').then((m) => ({ default: m.MyCasePage })))
+const HandlerCasePage = lazy(() => import('./pages/workplace/GrievancesPage').then((m) => ({ default: m.HandlerCasePage })))
+const PolicyPage = lazy(() => import('./pages/workplace/PoliciesPage').then((m) => ({ default: m.PolicyPage })))
+const SignupPage = lazy(() => import('./pages/public/SignupPage'))
+const ChangePasswordPage = lazy(() => import('./pages/public/ChangePasswordPage'))
+const SsoCallbackPage = lazy(() => import('./pages/SsoCallbackPage'))
+const OnboardingPage = lazy(() => import('./pages/onboarding/OnboardingPage'))
+const DashboardPage = lazy(() => import('./pages/DashboardPage'))
+const EmployeeListPage = lazy(() => import('./pages/employees/EmployeeListPage'))
+const EmployeeProfilePage = lazy(() => import('./pages/employees/EmployeeProfilePage'))
+const LeavePage = lazy(() => import('./pages/leave/LeavePage'))
+const LeaveTypesPage = lazy(() => import('./pages/leave/LeaveTypesPage'))
+const AttendancePage = lazy(() => import('./pages/attendance/AttendancePage'))
+const PayrollPage = lazy(() => import('./pages/payroll/PayrollPage'))
+const CycleDetailPage = lazy(() => import('./pages/payroll/CycleDetailPage'))
+const PayslipPage = lazy(() => import('./pages/payroll/PayslipPage'))
+const ExpensesPage = lazy(() => import('./pages/expenses/ExpensesPage'))
+const ApprovalsPage = lazy(() => import('./pages/approvals/ApprovalsPage'))
+const ActivitiesPage = lazy(() => import('./pages/activities/ActivitiesPage'))
+const ExitsPage = lazy(() => import('./pages/exits/ExitsPage'))
+const ExitDetailPage = lazy(() => import('./pages/exits/ExitDetailPage'))
+const SalarySetupPage = lazy(() => import('./pages/salary/SalarySetupPage'))
+const SecurityPage = lazy(() => import('./pages/SecurityPage'))
+const MastersPage = lazy(() => import('./pages/settings/MastersPage'))
+const AutomationPage = lazy(() => import('./pages/settings/AutomationPage'))
+const SettingsPage = lazy(() => import('./pages/SettingsPage'))
+const CompanySettingsPage = lazy(() => import('./pages/settings/CompanySettings').then((m) => ({ default: m.CompanySettingsPage })))
+const AppsSettingsPage = lazy(() => import('./pages/settings/CompanySettings').then((m) => ({ default: m.AppsSettingsPage })))
+const NotFoundPage = lazy(() => import('./pages/system/StatusPages').then((m) => ({ default: m.NotFoundPage })))
+const ComingSoonPage = lazy(() => import('./pages/system/StatusPages').then((m) => ({ default: m.ComingSoonPage })))
+
+const HR = ['hr_admin', 'system_admin']
+const DIRECTORY = ['manager', 'hr_admin', 'system_admin', 'payroll_admin', 'compliance_officer']
+const STAFF = ['hr_admin', 'payroll_admin', 'compliance_officer']
+const ADMINS = ['hr_admin', 'system_admin']
+const guard = (el: ReactNode, opts: { roles?: string[]; app?: string } = {}) => <ProtectedRoute {...opts}>{el}</ProtectedRoute>
+
+// Inside the shell a page loads under the bar, so a quiet placeholder is enough
+const PageLoading = () => <div style={{ padding: 8 }}>{[0, 1, 2].map((i) => <div key={i} className="skeleton" style={{ height: i ? 120 : 56, marginBottom: 14, borderRadius: 'var(--r-card)' }} />)}</div>
+const page = (el: ReactNode) => <Suspense fallback={<PageLoading />}>{el}</Suspense>
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <ToastProvider>
+            <BrowserRouter>
+              <Suspense fallback={<SplashScreen />}>
+                <Routes>
+                  <Route path="/" element={<LandingPage />} />
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/signup" element={<SignupPage />} />
+                  <Route path="/auth/sso" element={<SsoCallbackPage />} />
+                  <Route path="/change-password" element={<ProtectedRoute stage="password"><ChangePasswordPage /></ProtectedRoute>} />
+                  <Route path="/onboarding" element={<ProtectedRoute stage="onboarding"><OnboardingPage /></ProtectedRoute>} />
+                  <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
+                    <Route path="dashboard" element={page(<DashboardPage />)} />
+                    <Route path="employees" element={page(guard(<EmployeeListPage />, { roles: DIRECTORY }))} />
+                    <Route path="requests" element={page(<RequestsPage />)} />
+                    <Route path="my-requests" element={page(<RequestsPage />)} />
+                    <Route path="employees/import" element={page(guard(<ImportEmployeesPage />, { roles: ADMINS }))} />
+                    <Route path="employees/documents" element={page(guard(<BulkDocumentsPage />, { roles: ADMINS }))} />
+                    <Route path="employees/:id" element={page(<EmployeeProfilePage />)} />
+                    <Route path="org-chart" element={page(<OrgChartPage />)} />
+                    <Route path="recruitment" element={page(<RecruitmentPage />)} />
+                    <Route path="recruitment/candidates/:id" element={page(<CandidatePage />)} />
+                    <Route path="recruitment/:id" element={page(<OpeningPage />)} />
+                    <Route path="holidays" element={page(<HolidaysPage />)} />
+                    <Route path="announcements" element={page(<AnnouncementsPage />)} />
+                    <Route path="policies" element={page(<PoliciesPage />)} />
+                    <Route path="policies/:id" element={page(<PolicyPage />)} />
+                    <Route path="grievances" element={page(<GrievancesPage />)} />
+                    <Route path="incentives" element={page(guard(<IncentivesPage />, { app: 'payroll' }))} />
+                    <Route path="tax" element={page(guard(<TaxPage />, { app: 'payroll' }))} />
+                    <Route path="reports" element={page(guard(<ReportsPage />, { roles: [...HR, 'payroll_admin', 'compliance_officer', 'manager'] }))} />
+                    <Route path="reports/builder" element={page(guard(<ReportBuilderPage />, { roles: [...HR, 'payroll_admin', 'compliance_officer'] }))} />
+                    <Route path="reports/builder/:id" element={page(guard(<ReportBuilderPage />, { roles: [...HR, 'payroll_admin', 'compliance_officer'] }))} />
+                    <Route path="reports/:key" element={page(guard(<ReportPage />, { roles: [...HR, 'payroll_admin', 'compliance_officer', 'manager'] }))} />
+                    <Route path="audit" element={page(guard(<AuditPage />, { roles: [...HR, 'compliance_officer'] }))} />
+                    <Route path="grievances/mine/:id" element={page(<MyCasePage />)} />
+                    <Route path="grievances/:id" element={page(guard(<HandlerCasePage />, { roles: ['hr_admin'] }))} />
+                    <Route path="leave" element={page(guard(<LeavePage />, { app: 'leave' }))} />
+                    <Route path="attendance-policies" element={page(guard(<AttendancePoliciesPage />, { roles: ADMINS, app: 'attendance' }))} />
+                    <Route path="leave-types" element={page(guard(<LeaveTypesPage />, { roles: ['hr_admin'], app: 'leave' }))} />
+                    <Route path="attendance" element={page(guard(<AttendancePage />, { app: 'attendance' }))} />
+                    <Route path="payroll" element={page(guard(<PayrollPage />, { app: 'payroll' }))} />
+                    <Route path="payroll/cycles/:id" element={page(guard(<CycleDetailPage />, { roles: STAFF, app: 'payroll' }))} />
+                    <Route path="payroll/payslips/:id" element={page(guard(<PayslipPage />, { app: 'payroll' }))} />
+                    <Route path="expenses" element={page(guard(<ExpensesPage />, { app: 'expenses' }))} />
+                    <Route path="approvals" element={page(<ApprovalsPage />)} />
+                    <Route path="activities" element={page(<ActivitiesPage />)} />
+                    <Route path="exits" element={page(guard(<ExitsPage />, { app: 'exits' }))} />
+                    <Route path="exits/:id" element={page(guard(<ExitDetailPage />, { app: 'exits' }))} />
+                    <Route path="compensation" element={page(guard(<SalarySetupPage />, { roles: STAFF, app: 'payroll' }))} />
+                    <Route path="security" element={page(<SecurityPage />)} />
+                    <Route path="settings" element={page(guard(<SettingsPage />, { roles: [...ADMINS, 'payroll_admin'] }))} />
+                    <Route path="settings/masters" element={page(guard(<MastersPage />, { roles: ADMINS }))} />
+                    <Route path="settings/company" element={page(guard(<CompanySettingsPage />, { roles: ADMINS }))} />
+                    <Route path="settings/automation" element={page(guard(<AutomationPage />, { roles: ADMINS }))} />
+                    <Route path="settings/apps" element={page(guard(<AppsSettingsPage />, { roles: ADMINS }))} />
+                    <Route path="soon/:slug" element={page(<ComingSoonPage />)} />
+                    <Route path="*" element={page(<NotFoundPage />)} />
+                  </Route>
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </Suspense>
+            </BrowserRouter>
+          </ToastProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
+  )
+}
